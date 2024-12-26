@@ -22,7 +22,7 @@ export default function LandingPage() {
               <Link href="/auth/signup">
                 <Button size="lg" className="mr-4">Get Started</Button>
               </Link>
-              <Link href="/database">
+              <Link href="/auth/signup">
                 <Button size="lg" variant="outline">View Database</Button>
               </Link>
             </div>
