@@ -117,7 +117,7 @@ export default function SignUp() {
             className="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-white hover:bg-transparent dark:hover:bg-transparent"
           >
             <img
-              src="/google-icon.svg"
+              src="/google-icon-logo-svgrepo-com.svg"
               alt="Google"
               className="w-5 h-5"
             />

@@ -37,7 +37,7 @@ export default function AdminDashboard() {
 
   const checkAdminStatus = useCallback(async () => {
     if (!user) {
-      router.push("/signin")
+      router.push("api/admin/signin")
       return
     }
 

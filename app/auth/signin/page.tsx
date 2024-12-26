@@ -104,7 +104,7 @@ export default function SignIn() {
             className="w-full bg-white dark:bg-black border border-gray-300 dark:border-gray-800 text-gray-800 dark:text-white hover:bg-transparent"
           >
             <img
-              src="/google-icon.svg"
+              src="/google-icon-logo-svgrepo-com.svg"
               alt="Google"
               className="w-5 h-5"
             />
