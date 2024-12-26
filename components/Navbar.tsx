@@ -42,12 +42,6 @@ export default function Navbar() {
                 </>
               ) : (
                 <>
-                  <Link href="/auth/signin">
-                    <Button variant="outline">Sign In</Button>
-                  </Link>
-                  <Link href="/auth/signup">
-                    <Button>Sign Up</Button>
-                  </Link>
                 </>
               )}
             </>

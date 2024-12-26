@@ -4,7 +4,7 @@ import admin from 'firebase-admin';
 import { z } from 'zod';
 
 const updateReportSchema = z.object({
-  id: z.number(),
+  id: z.string(),
   status: z.enum(['Pending', 'Under Review', 'Confirmed', 'Rejected']),
 });
 

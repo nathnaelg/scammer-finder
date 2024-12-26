@@ -12,8 +12,15 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+enum Role {
+  USER
+  ADMIN
+}
+
+
 model ScamReport {
-  id               Int      @id @default(autoincrement())
+  id               String   @id @default(uuid())
   scammerUsername  String
   platform         String
   scamType         String
@@ -26,10 +33,11 @@ model ScamReport {
 }
 
 model User {
-  id        Int      @id @default(autoincrement())
+  id               String   @id @default(uuid())
   username  String   @unique
   email     String   @unique
   firebaseUid String  @unique
+  role        Role          @default(USER)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
