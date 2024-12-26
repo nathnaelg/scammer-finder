@@ -70,25 +70,19 @@ export default function ReportScamForm() {
 
     setIsSubmitting(true)
     try {
-      const formData = new FormData()
-      Object.entries(values).forEach(([key, value]) => {
-        if (value instanceof File) {
-          formData.append(key, value)
-        } else {
-          formData.append(key, value.toString())
-        }
-      })
-
+      const token = await user.getIdToken()
       const response = await fetch("/api/reports", {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${await user.getIdToken()}`,
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
-        body: formData,
+        body: JSON.stringify(values),
       })
 
       if (!response.ok) {
-        throw new Error("Failed to submit report")
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to submit report')
       }
 
       toast({
@@ -98,9 +92,10 @@ export default function ReportScamForm() {
       form.reset()
       router.push("/database")
     } catch (error) {
+      console.error('Error submitting report:', error)
       toast({
         title: "Error",
-        description: "There was a problem submitting your report.",
+        description: error instanceof Error ? error.message : "There was a problem submitting your report. Please try again.",
         variant: "destructive",
       })
     } finally {
@@ -226,3 +221,4 @@ export default function ReportScamForm() {
     </div>
   )
 }
+

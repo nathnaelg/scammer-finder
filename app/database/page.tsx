@@ -21,23 +21,23 @@ interface ScamReport {
   platform: string
   scamType: string
   status: string
-  riskScore: number
 }
 
 export default function ScamDatabase() {
   const [searchTerm, setSearchTerm] = useState("")
-  const [scams, setScams] = useState<ScamReport[]>([])
+  const [reports, setReports] = useState<ScamReport[]>([])
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const { user } = useAuth()
 
-  const fetchScams = async () => {
+  const fetchReports = async () => {
     if (!user) return
 
     try {
+      const token = await user.getIdToken()
       const response = await fetch(`/api/reports?page=${page}&search=${searchTerm}`, {
         headers: {
-          Authorization: `Bearer ${await user.getIdToken()}`,
+          Authorization: `Bearer ${token}`,
         },
       })
 
@@ -46,9 +46,10 @@ export default function ScamDatabase() {
       }
 
       const data = await response.json()
-      setScams(data.reports)
+      setReports(data.reports)
       setTotalPages(data.totalPages)
     } catch (error) {
+      console.error('Error fetching reports:', error)
       toast({
         title: "Error",
         description: "Failed to fetch scam reports. Please try again.",
@@ -58,7 +59,7 @@ export default function ScamDatabase() {
   }
 
   useEffect(() => {
-    fetchScams()
+    fetchReports()
   }, [user, page, searchTerm])
 
   return (
@@ -82,17 +83,15 @@ export default function ScamDatabase() {
             <TableHead>Platform</TableHead>
             <TableHead>Scam Type</TableHead>
             <TableHead>Status</TableHead>
-            <TableHead>Risk Score</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {scams.map((scam) => (
-            <TableRow key={scam.id}>
-              <TableCell>{scam.scammerUsername}</TableCell>
-              <TableCell>{scam.platform}</TableCell>
-              <TableCell>{scam.scamType}</TableCell>
-              <TableCell>{scam.status}</TableCell>
-              <TableCell>{scam.riskScore}</TableCell>
+          {reports.map((report) => (
+            <TableRow key={report.id}>
+              <TableCell>{report.scammerUsername}</TableCell>
+              <TableCell>{report.platform}</TableCell>
+              <TableCell>{report.scamType}</TableCell>
+              <TableCell>{report.status}</TableCell>
             </TableRow>
           ))}
         </TableBody>
@@ -111,3 +110,4 @@ export default function ScamDatabase() {
     </div>
   )
 }
+
