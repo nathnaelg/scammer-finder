@@ -53,7 +53,7 @@ export default function SignUp() {
         title: "Google Sign-Up Success",
         description: "Your Google account is linked. You can now start using the application.",
       })
-      router.push("/")
+      router.push("/dashboard")
     } catch (error) {
       toast({
         title: "Error",

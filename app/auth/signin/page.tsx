@@ -24,7 +24,7 @@ export default function SignIn() {
         title: "Signed in successfully",
         description: "Welcome back!",
       })
-      router.push("/")
+      router.push("/dashboard")
     } catch (error) {
       toast({
         title: "Error",
@@ -42,7 +42,7 @@ export default function SignIn() {
         title: "Signed in successfully",
         description: "Welcome back with Google!",
       })
-      router.push("/")
+      router.push("/dashboard")
     } catch (error) {
       toast({
         title: "Error",
