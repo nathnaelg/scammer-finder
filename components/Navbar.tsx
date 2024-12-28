@@ -6,6 +6,14 @@ import { ModeToggle } from "@/components/ui/mode-toggle"
 import { useAuth } from "@/hooks/useAuth"
 import { signOut } from "firebase/auth"
 import { auth } from "@/lib/firebase"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { User, LogOut } from 'lucide-react'
 
 export default function Navbar() {
   const { user, loading } = useAuth()
@@ -29,19 +37,37 @@ export default function Navbar() {
             <>
               {user ? (
                 <>
-                  <Link href="/report">
-                    <Button variant="outline">Report Scam</Button>
-                  </Link>
-                  <Link href="/database">
-                    <Button variant="outline">Scam Database</Button>
-                  </Link>
-                  <Link href="/profile">
-                    <Button variant="outline">Profile</Button>
-                  </Link>
-                  <Button onClick={handleSignOut}>Sign Out</Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src="/placeholder-user.jpg" alt={user.email || ""} />
+                          <AvatarFallback>{user.email ? user.email[0].toUpperCase() : 'U'}</AvatarFallback>
+                        </Avatar>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="w-56" align="end" forceMount>
+                      <DropdownMenuItem asChild>
+                        <Link href="/profile" className="flex items-center">
+                          <User className="mr-2 h-4 w-4" />
+                          <span>Profile</span>
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={handleSignOut} className="flex items-center">
+                        <LogOut className="mr-2 h-4 w-4" />
+                        <span>Sign Out</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </>
               ) : (
                 <>
+                  <Link href="/auth/signin">
+                    <Button variant="outline">Sign In</Button>
+                  </Link>
+                  <Link href="/auth/signup">
+                    <Button>Sign Up</Button>
+                  </Link>
                 </>
               )}
             </>
