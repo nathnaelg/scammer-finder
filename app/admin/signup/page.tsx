@@ -2,6 +2,8 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { createUserWithEmailAndPassword } from "firebase/auth"
+import { auth } from "@/lib/firebase"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -28,42 +30,35 @@ export default function AdminSignUp() {
     }
 
     try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password)
+      const idToken = await userCredential.user.getIdToken()
+
+      // Register as admin with our backend
       const response = await fetch('/api/admin/signup', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`,
         },
         body: JSON.stringify({
           email,
-          password,
           adminKey,
         }),
       })
 
-      const data = await response.json()
-
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to create admin account')
+        throw new Error('Failed to create admin account')
       }
 
-      if (response.status === 200) {
-        toast({
-          title: "Account Upgraded",
-          description: data.message,
-        })
-      } else {
-        toast({
-          title: "Admin Account Created",
-          description: "You can now log in with your new admin account.",
-        })
-      }
-      
+      toast({
+        title: "Admin account created successfully",
+        description: "You can now log in with your new admin account.",
+      })
       router.push("/admin/signin")
     } catch (error) {
-      console.error('Signup error:', error)
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to create an admin account. Please check your admin key and try again.",
+        description: "Failed to create an admin account. Please check your admin key and try again.",
         variant: "destructive",
       })
     }

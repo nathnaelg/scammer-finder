@@ -13,49 +13,17 @@ const signupSchema = z.object({
 })
 
 export async function POST(req: Request) {
-  console.log('Admin signup attempt initiated')
   try {
     const body = await req.json()
-    console.log('Received body:', JSON.stringify(body, null, 2))
     const { email, password, adminKey } = signupSchema.parse(body)
 
-    console.log('ADMIN_REGISTRATION_KEY:', process.env.ADMIN_REGISTRATION_KEY)
     console.log('Received admin key:', adminKey)
+    console.log('Expected admin key:', process.env.ADMIN_REGISTRATION_KEY)
 
     // Verify admin registration key
-    if (!process.env.ADMIN_REGISTRATION_KEY) {
-      console.error('ADMIN_REGISTRATION_KEY is not set in environment variables')
-      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 })
-    }
-
     if (adminKey !== process.env.ADMIN_REGISTRATION_KEY) {
       console.log('Admin key mismatch')
       return NextResponse.json({ error: 'Invalid admin key' }, { status: 403 })
-    }
-
-    // Check if the user already exists in Firebase
-    try {
-      const existingUser = await auth.getUserByEmail(email)
-      if (existingUser) {
-        // User exists, check if they're already an admin in our database
-        const dbUser = await prisma.user.findUnique({
-          where: { firebaseUid: existingUser.uid },
-        })
-
-        if (dbUser && dbUser.role === 'ADMIN') {
-          return NextResponse.json({ error: 'Admin account already exists' }, { status: 409 })
-        } else if (dbUser) {
-          // Existing user is not an admin, upgrade their role
-          await prisma.user.update({
-            where: { firebaseUid: existingUser.uid },
-            data: { role: 'ADMIN' },
-          })
-          await auth.setCustomUserClaims(existingUser.uid, { admin: true })
-          return NextResponse.json({ message: 'User upgraded to admin successfully' }, { status: 200 })
-        }
-      }
-    } catch (error) {
-      // User doesn't exist in Firebase, proceed with creation
     }
 
     // Create user in Firebase
@@ -88,11 +56,8 @@ export async function POST(req: Request) {
     }, { status: 201 })
   } catch (error) {
     console.error('Admin signup error:', error)
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: 'Invalid input data', details: error.errors }, { status: 400 })
-    }
     return NextResponse.json(
-      { error: 'Failed to create admin account', details: error instanceof Error ? error.message : String(error) },
+      { error: 'Failed to create admin account' },
       { status: 500 }
     )
   }

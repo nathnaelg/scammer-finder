@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { signInWithEmailAndPassword } from "firebase/auth"
 import { auth } from "@/lib/firebase"
@@ -8,19 +8,12 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { toast } from "@/components/ui/use-toast"
-import { useAuth } from "@/hooks/useAuth"
+import Link from "next/link"
 
 export default function AdminSignIn() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const router = useRouter()
-  const { user, loading } = useAuth()
-
-  useEffect(() => {
-    if (!loading && user) {
-      router.push("/admin/dashboard")
-    }
-  }, [user, loading, router])
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -48,21 +41,12 @@ export default function AdminSignIn() {
       })
       router.push("/admin/dashboard")
     } catch (error) {
-      console.error('Sign-in error:', error)
       toast({
         title: "Error",
         description: "Failed to sign in. Please check your credentials or admin status.",
         variant: "destructive",
       })
     }
-  }
-
-  if (loading) {
-    return <div>Loading...</div>
-  }
-
-  if (user) {
-    return null // or a loading spinner if you prefer
   }
 
   return (
@@ -101,6 +85,11 @@ export default function AdminSignIn() {
             Log In as Admin
           </Button>
         </form>
+        <div className="mt-4 text-center">
+          <Link href="/auth/signin" className="text-primary hover:underline">
+            Back to User Login
+          </Link>
+        </div>
       </div>
     </div>
   )

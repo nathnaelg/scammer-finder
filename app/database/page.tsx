@@ -64,7 +64,7 @@ export default function ScamDatabase() {
 
   return (
     <div className="container mx-auto py-8">
-      <h1 className="text-3xl font-bold mb-6">Scam Database</h1>
+      <h1 className="text-3xl font-bold mb-6">Confirmed Scam Database</h1>
       <div className="flex mb-4">
         <Input
           type="text"
@@ -76,13 +76,12 @@ export default function ScamDatabase() {
         <Button onClick={() => setSearchTerm("")}>Clear</Button>
       </div>
       <Table>
-        <TableCaption>A list of reported scams and suspicious accounts.</TableCaption>
+        <TableCaption>A list of confirmed scams and suspicious accounts.</TableCaption>
         <TableHeader>
           <TableRow>
             <TableHead>Username</TableHead>
             <TableHead>Platform</TableHead>
             <TableHead>Scam Type</TableHead>
-            <TableHead>Status</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -91,7 +90,6 @@ export default function ScamDatabase() {
               <TableCell>{report.scammerUsername}</TableCell>
               <TableCell>{report.platform}</TableCell>
               <TableCell>{report.scamType}</TableCell>
-              <TableCell>{report.status}</TableCell>
             </TableRow>
           ))}
         </TableBody>

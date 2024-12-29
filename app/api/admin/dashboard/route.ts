@@ -6,17 +6,23 @@ export async function GET(req: Request) {
   try {
     const token = req.headers.get('Authorization')?.split('Bearer ')[1]
     if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Unauthorized: No token provided' }, { status: 401 })
     }
 
-    // Verify admin status
-    const decodedToken = await auth.verifyIdToken(token)
+    let decodedToken;
+    try {
+      decodedToken = await auth.verifyIdToken(token)
+    } catch (error) {
+      console.error('Error verifying token:', error)
+      return NextResponse.json({ error: 'Unauthorized: Invalid token' }, { status: 401 })
+    }
+
     const user = await prisma.user.findUnique({
       where: { firebaseUid: decodedToken.uid },
     })
 
     if (!user || user.role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      return NextResponse.json({ error: 'Forbidden: User is not an admin' }, { status: 403 })
     }
 
     // Get dashboard statistics
@@ -55,8 +61,19 @@ export async function GET(req: Request) {
     // Transform reports data
     const formattedReports = reports.map(report => ({
       ...report,
+      id: report.id.toString(), // Ensure id is a string
       reportedAt: report.createdAt.toISOString(),
     }))
+
+    console.log("API Response:", { 
+      stats: {
+        totalReports,
+        pendingReview,
+        confirmedScams,
+        escalatedCases,
+      },
+      reports: formattedReports,
+    })
 
     return NextResponse.json({
       stats: {
@@ -70,7 +87,7 @@ export async function GET(req: Request) {
   } catch (error) {
     console.error('Dashboard error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Internal server error: ' + (error instanceof Error ? error.message : 'Unknown error') },
       { status: 500 }
     )
   }
