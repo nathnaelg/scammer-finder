@@ -3,23 +3,17 @@ import prisma from './prisma'
 interface ScamProfile {
   username: string
   platform: string
-  scamType: string
   description: string
+  createdAt: Date
 }
 
-export async function detectScam(profile: ScamProfile): Promise<number> {
+export async function calculateRiskScore(profile: ScamProfile): Promise<number> {
   let riskScore = 0
 
-  // Check if the username has been reported before
-  const existingReports = await prisma.scamReport.count({
-    where: {
-      scammerUsername: profile.username,
-      status: 'Confirmed',
-    },
-  })
-
-  if (existingReports > 0) {
-    riskScore += 50
+  // Check if the account is newly created (less than 7 days old)
+  const accountAge = Date.now() - profile.createdAt.getTime()
+  if (accountAge < 7 * 24 * 60 * 60 * 1000) {
+    riskScore += 20
   }
 
   // Check for suspicious keywords in the description
@@ -31,21 +25,16 @@ export async function detectScam(profile: ScamProfile): Promise<number> {
     }
   }
 
-  // Check for common scam types
-  const highRiskScamTypes = ['phishing', 'financial fraud', 'identity theft']
-  if (highRiskScamTypes.includes(profile.scamType.toLowerCase())) {
-    riskScore += 20
+  // Check for suspicious links in the description
+  const suspiciousLinkPatterns = [/bit\.ly/, /goo\.gl/, /tinyurl\.com/]
+  for (const pattern of suspiciousLinkPatterns) {
+    if (pattern.test(descriptionLower)) {
+      riskScore += 15
+    }
   }
 
-  // Check for newly created accounts (you would need to implement this logic based on your user data)
-  // For example:
-  // const user = await prisma.user.findUnique({ where: { username: profile.username } })
-  // if (user && user.createdAt > Date.now() - 7 * 24 * 60 * 60 * 1000) {
-  //   riskScore += 15
-  // }
-
-  // Cross-platform verification
-  const crossPlatformReports = await prisma.scamReport.count({
+  // Check for cross-platform matches
+  const crossPlatformMatches = await prisma.scamReport.count({
     where: {
       scammerUsername: profile.username,
       platform: { not: profile.platform },
@@ -53,35 +42,16 @@ export async function detectScam(profile: ScamProfile): Promise<number> {
     },
   })
 
-  if (crossPlatformReports > 0) {
+  if (crossPlatformMatches > 0) {
     riskScore += 30
   }
 
   return Math.min(riskScore, 100)
 }
 
-export async function validateReport(report: ScamProfile): Promise<boolean> {
-  // Implement additional validation logic here
-  // For example, check for duplicate reports, verify user credentials, etc.
-  return true
+export async function checkAgainstKnownScams(username: string): Promise<boolean> {
+  // This is a placeholder for integrating with external scam databases
+  // In a real-world scenario, you would make an API call to a service like PhishTank or similar
+  return false
 }
 
-export async function updateRiskScores(): Promise<void> {
-  const reports = await prisma.scamReport.findMany({
-    where: { status: 'Confirmed' },
-  })
-
-  for (const report of reports) {
-    const riskScore = await detectScam({
-      username: report.scammerUsername,
-      platform: report.platform,
-      scamType: report.scamType,
-      description: report.description,
-    })
-
-    await prisma.scamReport.update({
-      where: { id: report.id },
-      data: { riskScore },
-    })
-  }
-}

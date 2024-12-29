@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "ScamReport" ADD COLUMN     "communityVotes" INTEGER NOT NULL DEFAULT 0,
+ADD COLUMN     "riskScore" INTEGER NOT NULL DEFAULT 0;

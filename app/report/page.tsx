@@ -85,9 +85,11 @@ export default function ReportScamForm() {
         throw new Error(errorData.error || 'Failed to submit report')
       }
 
+      const reportData = await response.json()
+
       toast({
         title: "Scam report submitted",
-        description: "Thank you for helping to make the internet safer.",
+        description: `Thank you for helping to make the internet safer. The risk score for this report is ${reportData.riskScore}.`,
       })
       form.reset()
       router.push("/database")

@@ -28,6 +28,8 @@ model ScamReport {
   evidence         String?
   reportedBy       String
   status           String   @default("Pending")
+  riskScore        Int      @default(0)
+  communityVotes   Int      @default(0)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 }
