@@ -30,13 +30,14 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { toast } from "@/components/ui/use-toast"
 import { AlertTriangle, CheckCircle, XCircle, ArrowUpCircle, Search, Users, ShieldAlert, Activity } from 'lucide-react'
+import { ScamStatus } from '@prisma/client'
 
 interface ScamReport {
   id: string
   scammerUsername: string
   platform: string
   scamType: string
-  status: 'Pending' | 'Under Review' | 'Confirmed' | 'Rejected' | 'Escalated'
+  status: ScamStatus
   reportedAt: string
   description: string
 }
@@ -48,6 +49,12 @@ interface DashboardStats {
   escalatedCases: number
 }
 
+const statusColors: Record<ScamStatus, string> = {
+  PENDING: 'bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500/20',
+  RESOLVED: 'bg-green-500/10 text-green-500 hover:bg-green-500/20',
+  REJECTED: 'bg-red-500/10 text-red-500 hover:bg-red-500/20',
+}
+
 export default function AdminDashboard() {
   const [reports, setReports] = useState<ScamReport[]>([])
   const [stats, setStats] = useState<DashboardStats>({
@@ -57,7 +64,9 @@ export default function AdminDashboard() {
     escalatedCases: 0
   })
   const [searchTerm, setSearchTerm] = useState("")
-  const [filterStatus, setFilterStatus] = useState("all")
+  const [filterStatus, setFilterStatus] = useState<ScamStatus | "all">("all")
+  const [page, setPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
   const [isAdmin, setIsAdmin] = useState(false)
   const { user, loading } = useAuth()
   const router = useRouter()
@@ -103,7 +112,7 @@ export default function AdminDashboard() {
 
     try {
       const token = await user.getIdToken()
-      const response = await fetch("/api/admin/dashboard", {
+      const response = await fetch(`/api/admin/dashboard?page=${page}&search=${searchTerm}&status=${filterStatus}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -115,14 +124,9 @@ export default function AdminDashboard() {
       }
 
       const data = await response.json()
-      console.log("Dashboard data:", data)
-      setReports(data.reports || [])
-      setStats(data.stats || {
-        totalReports: 0,
-        pendingReview: 0,
-        confirmedScams: 0,
-        escalatedCases: 0
-      })
+      setReports(data.reports)
+      setStats(data.stats)
+      setTotalPages(data.totalPages)
     } catch (error) {
       console.error('Error fetching dashboard data:', error)
       toast({
@@ -133,18 +137,18 @@ export default function AdminDashboard() {
     }
   }
 
-  const handleStatusChange = async (reportId: string, newStatus: ScamReport['status']) => {
+  const handleStatusChange = async (reportId: string, newStatus: ScamStatus) => {
     try {
       const token = await user?.getIdToken()
       if (!token) {
         throw new Error("No authentication token available")
       }
 
-      const response = await fetch(`/api/admin/reports/${reportId}`, {
+      const response = await fetch(`/api/admin/reports/${reportId}/status`, {
         method: "PUT",
         headers: {
-          "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ status: newStatus }),
       })
@@ -154,10 +158,7 @@ export default function AdminDashboard() {
         throw new Error(errorData.error || "Failed to update report status")
       }
 
-      const updatedReport = await response.json()
-      console.log("Updated report:", updatedReport)
-
-      fetchDashboardData()
+      await fetchDashboardData()
       toast({
         title: "Status Updated",
         description: `The report status has been updated to ${newStatus}.`,
@@ -173,15 +174,44 @@ export default function AdminDashboard() {
   }
 
   const handleEscalate = async (reportId: string) => {
-    await handleStatusChange(reportId, 'Escalated')
+    try {
+      const token = await user?.getIdToken()
+      if (!token) {
+        throw new Error("No authentication token available")
+      }
+
+      const response = await fetch(`/api/admin/reports/${reportId}/escalate`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to escalate report")
+      }
+
+      await fetchDashboardData()
+      toast({
+        title: "Report Escalated",
+        description: "The report has been escalated for further review.",
+      })
+    } catch (error) {
+      console.error('Error escalating report:', error)
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to escalate report",
+        variant: "destructive",
+      })
+    }
   }
 
-  const filteredReports = reports.filter(report => 
-    (filterStatus === "all" || report.status === filterStatus) &&
-    (report.scammerUsername.toLowerCase().includes(searchTerm.toLowerCase()) ||
-     report.platform.toLowerCase().includes(searchTerm.toLowerCase()) ||
-     report.scamType.toLowerCase().includes(searchTerm.toLowerCase()))
-  )
+  useEffect(() => {
+    if (isAdmin) {
+      fetchDashboardData()
+    }
+  }, [isAdmin, page, searchTerm, filterStatus])
 
   if (loading) {
     return <div>Loading...</div>
@@ -251,17 +281,15 @@ export default function AdminDashboard() {
                 className="max-w-sm"
               />
             </div>
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
+            <Select value={filterStatus} onValueChange={(value) => setFilterStatus(value as ScamStatus | "all")}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Reports</SelectItem>
-                <SelectItem value="Pending">Pending Review</SelectItem>
-                <SelectItem value="Under Review">Under Review</SelectItem>
-                <SelectItem value="Confirmed">Confirmed</SelectItem>
-                <SelectItem value="Rejected">Rejected</SelectItem>
-                <SelectItem value="Escalated">Escalated</SelectItem>
+                <SelectItem value="PENDING">Pending</SelectItem>
+                <SelectItem value="RESOLVED">Resolved</SelectItem>
+                <SelectItem value="REJECTED">Rejected</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -277,7 +305,7 @@ export default function AdminDashboard() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredReports.map((report) => (
+              {reports.map((report) => (
                 <TableRow key={report.id}>
                   <TableCell className="font-medium">
                     {report.scammerUsername}
@@ -286,13 +314,8 @@ export default function AdminDashboard() {
                   <TableCell>{report.scamType}</TableCell>
                   <TableCell>
                     <Badge
-                      variant={
-                        report.status === "Confirmed"
-                          ? "default"
-                          : report.status === "Rejected"
-                          ? "destructive"
-                          : "secondary"
-                      }
+                      variant="outline"
+                      className={statusColors[report.status]}
                     >
                       {report.status}
                     </Badge>
@@ -300,20 +323,16 @@ export default function AdminDashboard() {
                   <TableCell>{report.reportedAt}</TableCell>
                   <TableCell>
                     <div className="flex items-center space-x-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleStatusChange(report.id, "Confirmed")}
-                      >
-                        <CheckCircle className="h-4 w-4 text-green-500" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleStatusChange(report.id, "Rejected")}
-                      >
-                        <XCircle className="h-4 w-4 text-red-500" />
-                      </Button>
+                      <Select onValueChange={(value) => handleStatusChange(report.id, value as ScamStatus)}>
+                        <SelectTrigger className="w-[120px]">
+                          <SelectValue placeholder="Change status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="PENDING">Pending</SelectItem>
+                          <SelectItem value="RESOLVED">Resolved</SelectItem>
+                          <SelectItem value="REJECTED">Rejected</SelectItem>
+                        </SelectContent>
+                      </Select>
                       <Button
                         size="sm"
                         variant="outline"
@@ -327,6 +346,25 @@ export default function AdminDashboard() {
               ))}
             </TableBody>
           </Table>
+          <div className="flex justify-between items-center mt-4">
+            <Button 
+              variant="outline"
+              onClick={() => setPage(page - 1)} 
+              disabled={page === 1}
+            >
+              Previous
+            </Button>
+            <span className="text-sm text-muted-foreground">
+              Page {page} of {totalPages}
+            </span>
+            <Button 
+              variant="outline"
+              onClick={() => setPage(page + 1)} 
+              disabled={page === totalPages}
+            >
+              Next
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </div>

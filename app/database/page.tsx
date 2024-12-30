@@ -29,16 +29,20 @@ interface ScamReport {
   scammerUsername: string
   platform: string
   scamType: string
-  status: 'Pending' | 'Under Review' | 'Confirmed' | 'Rejected' | 'Escalated'
+  status: 'PENDING' | 'RESOLVED' | 'REJECTED' | 'Under Review' | 'Confirmed' | 'Escalated'
   riskScore: number
   communityVotes: number
+  description: string
 }
 
-const statusColors: Record<ScamReport['status'], string> = {
-  'Pending': 'bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500/20',
+type ScamStatus = ScamReport['status']
+
+const statusColors: Record<ScamStatus, string> = {
+  'PENDING': 'bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500/20',
+  'RESOLVED': 'bg-green-500/10 text-green-500 hover:bg-green-500/20',
+  'REJECTED': 'bg-red-500/10 text-red-500 hover:bg-red-500/20',
   'Under Review': 'bg-blue-500/10 text-blue-500 hover:bg-blue-500/20',
   'Confirmed': 'bg-red-500/10 text-red-500 hover:bg-red-500/20',
-  'Rejected': 'bg-green-500/10 text-green-500 hover:bg-green-500/20',
   'Escalated': 'bg-purple-500/10 text-purple-500 hover:bg-purple-500/20',
 }
 
@@ -151,10 +155,11 @@ export default function ScamDatabase() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Statuses</SelectItem>
-              <SelectItem value="Pending">Pending</SelectItem>
+              <SelectItem value="PENDING">Pending</SelectItem>
+              <SelectItem value="RESOLVED">Resolved</SelectItem>
+              <SelectItem value="REJECTED">Rejected</SelectItem>
               <SelectItem value="Under Review">Under Review</SelectItem>
               <SelectItem value="Confirmed">Confirmed</SelectItem>
-              <SelectItem value="Rejected">Rejected</SelectItem>
               <SelectItem value="Escalated">Escalated</SelectItem>
             </SelectContent>
           </Select>

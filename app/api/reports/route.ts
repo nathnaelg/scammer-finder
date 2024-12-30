@@ -50,12 +50,20 @@ export async function POST(req: Request) {
 
     const isKnownScam = await checkAgainstKnownScams(validatedData.scammerUsername)
 
+    const user = await prisma.user.findUnique({
+      where: { firebaseUid: userId },
+    })
+
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+
     const report = await prisma.scamReport.create({
       data: {
         ...validatedData,
-        reportedBy: userId,
+        reportedBy: user.id,
         riskScore,
-        status: isKnownScam ? 'Confirmed' : 'Pending',
+        status: isKnownScam ? 'RESOLVED' : 'PENDING',
       },
     })
 
@@ -76,7 +84,7 @@ export async function GET(req: Request) {
 
     const whereClause: Prisma.ScamReportWhereInput = {
       AND: [
-        status !== 'all' ? { status } : {},
+        status !== 'all' ? { status: status as Prisma.ScamReportWhereInput['status']} : {},
         {
           OR: [
             { scammerUsername: { contains: search, mode: 'insensitive' } },

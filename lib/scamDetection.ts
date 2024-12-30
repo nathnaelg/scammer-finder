@@ -38,7 +38,7 @@ export async function calculateRiskScore(profile: ScamProfile): Promise<number> 
     where: {
       scammerUsername: profile.username,
       platform: { not: profile.platform },
-      status: 'Confirmed',
+      status: 'RESOLVED',
     },
   })
 
@@ -53,5 +53,25 @@ export async function checkAgainstKnownScams(username: string): Promise<boolean>
   // This is a placeholder for integrating with external scam databases
   // In a real-world scenario, you would make an API call to a service like PhishTank or similar
   return false
+}
+
+export async function checkCrossPlatformBehavior(username: string, platform: string): Promise<boolean> {
+  const crossPlatformReports = await prisma.scamReport.findMany({
+    where: {
+      scammerUsername: username,
+      platform: { not: platform },
+      status: 'RESOLVED',
+    },
+  })
+
+  return crossPlatformReports.length > 0
+}
+
+export async function checkAgainstExternalDatabase(username: string): Promise<boolean> {
+  // This is a placeholder for checking against external scam databases
+  // In a real implementation, you would make an API call to services like PhishTank or similar
+  const response = await fetch(`https://api.externalscamdatabase.com/check?username=${username}`)
+  const data = await response.json()
+  return data.isScammer
 }
 

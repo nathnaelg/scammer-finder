@@ -25,15 +25,22 @@ export async function POST(
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
 
-    const userId = decodedToken.uid
+    const firebaseUid = decodedToken.uid
 
     const body = await req.json()
     const { voteType } = voteSchema.parse(body)
 
-    // Properly await and validate params
-    const { id } = await Promise.resolve(params)
+    const { id } = params
     if (!id) {
       return NextResponse.json({ error: "Report ID is missing" }, { status: 400 })
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { firebaseUid },
+    })
+
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
     const report = await prisma.scamReport.findUnique({
@@ -42,6 +49,34 @@ export async function POST(
 
     if (!report) {
       return NextResponse.json({ error: 'Report not found' }, { status: 404 })
+    }
+
+    const existingVote = await prisma.vote.findUnique({
+      where: {
+        userId_reportId: {
+          userId: user.id,
+          reportId: report.id,
+        },
+      },
+    })
+
+    if (existingVote) {
+      if (existingVote.voteType === voteType) {
+        return NextResponse.json({ error: 'You have already voted' }, { status: 400 })
+      }
+
+      await prisma.vote.update({
+        where: { id: existingVote.id },
+        data: { voteType },
+      })
+    } else {
+      await prisma.vote.create({
+        data: {
+          userId: user.id,
+          reportId: report.id,
+          voteType,
+        },
+      })
     }
 
     const voteValue = voteType === 'up' ? 1 : -1

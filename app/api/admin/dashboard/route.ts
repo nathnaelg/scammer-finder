@@ -35,13 +35,13 @@ export async function GET(req: Request) {
     ] = await Promise.all([
       prisma.scamReport.count(),
       prisma.scamReport.count({
-        where: { status: 'Pending' },
+        where: { status: 'PENDING' },
       }),
       prisma.scamReport.count({
-        where: { status: 'Confirmed' },
+        where: { status: 'RESOLVED' },
       }),
       prisma.scamReport.count({
-        where: { status: 'Escalated' },
+        where: { status: 'REJECTED' },
       }),
       prisma.scamReport.findMany({
         orderBy: { createdAt: 'desc' },

@@ -43,6 +43,17 @@ const formSchema = z.object({
   evidence: z.instanceof(File).optional(),
 })
 
+const scamTypes = [
+  { value: "phishing", label: "Phishing" },
+  { value: "fake_profile", label: "Fake Profile" },
+  { value: "spam", label: "Spam" },
+  { value: "financial_fraud", label: "Financial Fraud" },
+  { value: "product_scam", label: "Product Scam" },
+  { value: "unsolicited_messaging", label: "Unsolicited Messaging" },
+  { value: "identity_theft", label: "Identity Theft" },
+  { value: "other", label: "Other" },
+]
+
 export default function ReportScamForm() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const { user } = useAuth()
@@ -163,11 +174,11 @@ export default function ReportScamForm() {
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="phishing">Phishing</SelectItem>
-                    <SelectItem value="fake_profile">Fake Profile</SelectItem>
-                    <SelectItem value="financial_fraud">Financial Fraud</SelectItem>
-                    <SelectItem value="product_scam">Product Scam</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
+                    {scamTypes.map((scamType) => (
+                      <SelectItem key={scamType.value} value={scamType.value}>
+                        {scamType.label}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 <FormMessage />

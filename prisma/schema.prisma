@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -18,28 +12,68 @@ enum Role {
   ADMIN
 }
 
+enum ScamStatus {
+  PENDING
+  RESOLVED
+  REJECTED
+}
 
 model ScamReport {
-  id               String   @id @default(uuid())
-  scammerUsername  String
-  platform         String
-  scamType         String
-  description      String
-  evidence         String?
+  id               String    @id @default(uuid())
+  scammerUsername  String    @db.VarChar(255)
+  platform         String    @db.VarChar(100)
+  scamType         String    @db.VarChar(100)
+  description      String    @db.Text
+  evidence         String?   @db.Text
   reportedBy       String
-  status           String   @default("Pending")
-  riskScore        Int      @default(0)
-  communityVotes   Int      @default(0)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  status           ScamStatus @default(PENDING)
+  riskScore        Int       @default(0)
+  communityVotes   Int       @default(0)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  createdBy        String?
+  updatedBy        String?
+  user             User      @relation(fields: [reportedBy], references: [firebaseUid])
+  votes            Vote[]
+  
+  @@index([scammerUsername])
 }
 
 model User {
-  id               String   @id @default(uuid())
-  username  String   @unique
-  email     String   @unique
-  firebaseUid String  @unique
-  role        Role          @default(USER)
+  id          String          @id @default(uuid())
+  username    String          @unique @db.VarChar(50)
+  email       String          @unique @db.VarChar(255)
+  firebaseUid String          @unique @db.VarChar(255)
+  role        Role            @default(USER)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  reports     ScamReport[]
+  votes       Vote[]
+  notifications Notification[]
+  
+  @@index([username])
+  @@index([email])
+}
+
+model Vote {
+  id           String     @id @default(uuid())
+  userId       String
+  reportId     String
+  voteType     String     @db.VarChar(50)
+  createdAt    DateTime   @default(now())
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  report       ScamReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, reportId])
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  message   String   @db.VarChar(500)
+  read      Boolean  @default(false)
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId, read])
 }
