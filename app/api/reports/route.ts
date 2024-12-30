@@ -3,6 +3,7 @@ import prisma from '@/lib/prisma'
 import { auth } from '@/lib/firebase-admin'
 import { z } from 'zod'
 import { calculateRiskScore, checkAgainstKnownScams } from '@/lib/scamDetection'
+import { Prisma } from '@prisma/client';
 
 const reportSchema = z.object({
   scammerUsername: z.string().min(2),
@@ -70,29 +71,31 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url)
     const page = parseInt(searchParams.get('page') || '1', 10)
     const search = searchParams.get('search') || ''
+    const status = searchParams.get('status') || 'all'
     const pageSize = 10
 
+    const whereClause: Prisma.ScamReportWhereInput = {
+      AND: [
+        status !== 'all' ? { status } : {},
+        {
+          OR: [
+            { scammerUsername: { contains: search, mode: 'insensitive' } },
+            { platform: { contains: search, mode: 'insensitive' } },
+            { scamType: { contains: search, mode: 'insensitive' } },
+          ],
+        },
+      ],
+    };
+
     const reports = await prisma.scamReport.findMany({
-      where: {
-        OR: [
-          { scammerUsername: { contains: search, mode: 'insensitive' } },
-          { platform: { contains: search, mode: 'insensitive' } },
-          { scamType: { contains: search, mode: 'insensitive' } },
-        ],
-      },
+      where: whereClause,
       orderBy: { createdAt: 'desc' },
       skip: (page - 1) * pageSize,
       take: pageSize,
     })
 
     const totalReports = await prisma.scamReport.count({
-      where: {
-        OR: [
-          { scammerUsername: { contains: search, mode: 'insensitive' } },
-          { platform: { contains: search, mode: 'insensitive' } },
-          { scamType: { contains: search, mode: 'insensitive' } },
-        ],
-      },
+      where: whereClause,
     })
 
     const totalPages = Math.ceil(totalReports / pageSize)
@@ -104,7 +107,10 @@ export async function GET(req: Request) {
     })
   } catch (error) {
     console.error('Error fetching reports:', error)
-    return NextResponse.json({ error: 'Internal Server Error', details: error instanceof Error ? error.message : String(error) }, { status: 500 })
+    return NextResponse.json(
+      { error: 'Internal Server Error', details: error instanceof Error ? error.message : String(error) },
+      { status: 500 }
+    )
   }
 }
 
