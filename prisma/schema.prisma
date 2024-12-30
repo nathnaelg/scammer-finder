@@ -77,3 +77,10 @@ model Notification {
   
   @@index([userId, read])
 }
+
+model ContactMessage {
+  id        String   @id @default(uuid())
+  email     String   @db.VarChar(255)
+  message   String   @db.Text
+  createdAt DateTime @default(now())
+}

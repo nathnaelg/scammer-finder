@@ -7,8 +7,40 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Shield, AlertTriangle, Search, Users, BarChart, Send } from "lucide-react";
 import { Typewriter } from "react-simple-typewriter";
+import { useState } from "react";
 
 export default function LandingPage() {
+  const [email, setEmail] = useState<string>("");
+  const [message, setMessage] = useState<string>("");
+  const [status, setStatus] = useState<string | null>(null);
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setStatus(null);
+
+    try {
+      const response = await fetch("/api/contact", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, message }),
+      });
+
+      if (response.ok) {
+        setStatus("Your message has been sent successfully!");
+        setEmail("");
+        setMessage("");
+      } else {
+        const errorData = await response.json();
+        setStatus(errorData.error || "Something went wrong. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error submitting form:", error);
+      setStatus("An error occurred. Please try again.");
+    }
+  };
+
   return (
     <div className="flex flex-col min-h-screen">
       {/* Hero Section */}
@@ -118,14 +150,37 @@ export default function LandingPage() {
         <div className="container mx-auto max-w-6xl px-4">
           <div className="max-w-xl mx-auto text-center">
             <h2 className="text-3xl font-bold mb-12">Get Started Today</h2>
-            <form className="space-y-4">
-              <Input type="email" placeholder="Enter your email" />
-              <Textarea placeholder="Your message (optional)" />
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <Input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Enter your email"
+                required
+                className="w-full"
+              />
+              <Textarea
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                placeholder="Your message (optional)"
+                required
+                className="w-full"
+                rows={5}
+              />
               <Button type="submit" className="w-full">
                 <Send className="w-4 h-4 mr-2" />
-                Join the Community
+                Send Message
               </Button>
             </form>
+            {status && (
+              <p
+                className={`mt-4 text-sm ${
+                  status.includes("successfully") ? "text-green-500" : "text-red-500"
+                }`}
+              >
+                {status}
+              </p>
+            )}
           </div>
         </div>
       </section>
