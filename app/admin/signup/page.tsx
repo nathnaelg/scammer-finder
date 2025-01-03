@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { createUserWithEmailAndPassword } from "firebase/auth"
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth"
 import { auth } from "@/lib/firebase"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -30,7 +30,19 @@ export default function AdminSignUp() {
     }
 
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password)
+      let userCredential;
+      try {
+        // Try to create a new user
+        userCredential = await createUserWithEmailAndPassword(auth, email, password)
+      } catch (error: any) {
+        // If the email is already in use, try to sign in instead
+        if (error.code === 'auth/email-already-in-use') {
+          userCredential = await signInWithEmailAndPassword(auth, email, password)
+        } else {
+          throw error;
+        }
+      }
+
       const idToken = await userCredential.user.getIdToken()
 
       // Register as admin with our backend
@@ -42,12 +54,14 @@ export default function AdminSignUp() {
         },
         body: JSON.stringify({
           email,
+          password, // Include password in the request
           adminKey,
         }),
       })
 
       if (!response.ok) {
-        throw new Error('Failed to create admin account')
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to create admin account')
       }
 
       toast({
@@ -56,9 +70,10 @@ export default function AdminSignUp() {
       })
       router.push("/admin/signin")
     } catch (error) {
+      console.error('Signup error:', error)
       toast({
         title: "Error",
-        description: "Failed to create an admin account. Please check your admin key and try again.",
+        description: error instanceof Error ? error.message : "Failed to create an admin account. Please check your admin key and try again.",
         variant: "destructive",
       })
     }

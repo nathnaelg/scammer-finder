@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { GoogleAuthProvider, createUserWithEmailAndPassword, signInWithPopup } from "firebase/auth"
+import { GoogleAuthProvider, createUserWithEmailAndPassword, signInWithPopup, User } from "firebase/auth"
 import { auth } from "@/lib/firebase"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -15,6 +15,25 @@ export default function SignUp() {
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const router = useRouter()
+
+  const createUserInDatabase = async (user: User) => {
+    const token = await user.getIdToken()
+    const response = await fetch("/api/users", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        email: user.email,
+        username: user.email?.split("@")[0] || "user",
+      }),
+    })
+
+    if (!response.ok) {
+      throw new Error("Failed to create user in database")
+    }
+  }
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -29,13 +48,15 @@ export default function SignUp() {
     }
 
     try {
-      await createUserWithEmailAndPassword(auth, email, password)
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password)
+      await createUserInDatabase(userCredential.user)
       toast({
         title: "Account created successfully",
         description: "You can now log in with your new account.",
       })
       router.push("/auth/signin")
     } catch (error) {
+      console.error("Error during sign up:", error)
       toast({
         title: "Error",
         description: "Failed to create an account. Please try again.",
@@ -48,13 +69,15 @@ export default function SignUp() {
     const provider = new GoogleAuthProvider()
 
     try {
-      await signInWithPopup(auth, provider)
+      const result = await signInWithPopup(auth, provider)
+      await createUserInDatabase(result.user)
       toast({
         title: "Google Sign-Up Success",
         description: "Your Google account is linked. You can now start using the application.",
       })
       router.push("/dashboard")
     } catch (error) {
+      console.error("Error during Google sign up:", error)
       toast({
         title: "Error",
         description: "Failed to sign up with Google. Please try again later.",
@@ -119,7 +142,7 @@ export default function SignUp() {
             <img
               src="/google-icon-logo-svgrepo-com.svg"
               alt="Google"
-              className="w-5 h-5"
+              className="w-5 h-5 mr-2"
             />
             <span>Continue with Google</span>
           </Button>
@@ -145,3 +168,4 @@ export default function SignUp() {
     </div>
   )
 }
+

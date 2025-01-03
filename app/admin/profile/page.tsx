@@ -9,51 +9,71 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { toast } from "@/components/ui/use-toast"
-import { UserProfile } from "@/types/userProfile" // Adjust the import path as needed
 
-interface AdminProfile extends UserProfile {
-  reportsReviewed: number
+interface AdminProfile {
   username: string
+  email: string
   role: string
   joinDate: string
-  email: string
+  reportsReviewed: number
 }
 
 export default function AdminProfile() {
   const [profile, setProfile] = useState<AdminProfile | null>(null)
   const [isEditing, setIsEditing] = useState(false)
-  const { user } = useAuth()
+  const { user, loading } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
-    if (!user) {
-      router.push("/admin/signin")
-    } else {
-      fetchAdminProfile()
+    const checkAuth = async () => {
+      if (loading) return;
+
+      if (!user) {
+        router.push("/admin/signin")
+      } else {
+        try {
+          await fetchAdminProfile()
+        } catch (error) {
+          console.error("Error fetching admin profile:", error)
+          if (error instanceof Error && error.message === "Unauthorized") {
+            toast({
+              title: "Authentication Error",
+              description: "Please sign in again as an admin.",
+              variant: "destructive",
+            })
+            router.push("/admin/signin")
+          } else {
+            toast({
+              title: "Error",
+              description: "Failed to load admin profile. Please try again.",
+              variant: "destructive",
+            })
+          }
+        }
+      }
     }
-  }, [user, router])
+    checkAuth()
+  }, [user, loading, router])
 
   const fetchAdminProfile = async () => {
-    try {
-      const token = await user?.getIdToken()
-      const response = await fetch("/api/admin/profile", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-      if (!response.ok) {
-        throw new Error("Failed to fetch admin profile")
+    const token = await user?.getIdToken()
+    if (!token) throw new Error("No authentication token")
+    
+    const response = await fetch("/api/admin/profile", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error("Unauthorized")
       }
-      const data = await response.json()
-      setProfile(data)
-    } catch (error) {
-      console.error("Error fetching admin profile:", error)
-      toast({
-        title: "Error",
-        description: "Failed to load admin profile. Please try again.",
-        variant: "destructive",
-      })
+      throw new Error("Failed to fetch admin profile")
     }
+
+    const data = await response.json()
+    setProfile(data)
   }
 
   const handleSave = async (e: React.FormEvent) => {
@@ -71,8 +91,6 @@ export default function AdminProfile() {
       if (!response.ok) {
         throw new Error("Failed to update profile")
       }
-      const updatedProfile = await response.json() // Add this line to get the updated profile
-      setProfile(updatedProfile) // Update the profile state with the response data
       setIsEditing(false)
       toast({
         title: "Profile Updated",
@@ -88,7 +106,7 @@ export default function AdminProfile() {
     }
   }
 
-  if (!profile) {
+  if (loading || !profile) {
     return <div>Loading...</div>
   }
 
@@ -132,11 +150,6 @@ export default function AdminProfile() {
                   disabled={!isEditing}
                 />
               </div>
-              {isEditing ? (
-                <Button type="submit">Save Changes</Button>
-              ) : (
-                <Button type="button" onClick={() => setIsEditing(true)}>Edit Profile</Button>
-              )}
             </div>
           </form>
         </CardContent>

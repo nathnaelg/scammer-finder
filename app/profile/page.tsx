@@ -20,57 +20,56 @@ interface UserProfile {
 export default function UserProfile() {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [isEditing, setIsEditing] = useState(false)
-  const { user } = useAuth()
+  const [isLoading, setIsLoading] = useState(true)
+  const { user, loading } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
-    if (!user) {
-      router.push("/auth/signin")
-    } else {
-      fetchUserProfile()
-    }
-  }, [user, router])
+    const checkAuth = async () => {
+      if (loading) return;
 
-  const fetchUserProfile = async () => {
-    try {
-      const token = await user?.getIdToken()
-      const response = await fetch("/api/user/profile", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-      if (!response.ok) {
-        const contentType = response.headers.get("content-type")
-        if (contentType && contentType.includes("application/json")) {
-          const errorData = await response.json()
-          throw new Error(errorData.message || "Failed to fetch user profile")
-        } else {
-          router.push("/auth/signin")
-          return
+      if (!user) {
+        router.push("/auth/signin")
+      } else {
+        try {
+          await fetchUserProfile()
+        } catch (error) {
+          console.error("Error fetching user profile:", error)
+          toast({
+            title: "Error",
+            description: "Failed to load user profile. Please try again.",
+            variant: "destructive",
+          })
+        } finally {
+          setIsLoading(false)
         }
       }
-      const contentType = response.headers.get("content-type")
-      if (!contentType || !contentType.includes("application/json")) {
-        throw new Error("Invalid response format")
-      }
-      const data = await response.json()
-      setProfile(data)
-    } catch (error) {
-      const errorMessage = (error as Error).message || "Failed to load user profile. Please try again."
-      console.error("Error fetching user profile:", error)
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
-      })
     }
+    checkAuth()
+  }, [user, loading, router])
+
+  const fetchUserProfile = async () => {
+    const token = await user?.getIdToken()
+    if (!token) throw new Error("No authentication token")
+    
+    const response = await fetch("/api/users/profile", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+    if (!response.ok) {
+      const errorData = await response.json()
+      throw new Error(errorData.error || "Failed to fetch user profile")
+    }
+    const data = await response.json()
+    setProfile(data)
   }
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
       const token = await user?.getIdToken()
-      const response = await fetch("/api/user/profile", {
+      const response = await fetch("/api/users/profile", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -87,18 +86,21 @@ export default function UserProfile() {
         description: "Your profile has been successfully updated.",
       })
     } catch (error) {
-      const errorMessage = (error as Error).message || "Failed to update profile. Please try again."
       console.error("Error updating profile:", error)
       toast({
         title: "Error",
-        description: errorMessage,
+        description: "Failed to update profile. Please try again.",
         variant: "destructive",
       })
     }
   }
 
-  if (!profile) {
+  if (isLoading) {
     return <div>Loading...</div>
+  }
+
+  if (!profile) {
+    return <div>Failed to load profile. Please try refreshing the page.</div>
   }
 
   return (
@@ -140,11 +142,6 @@ export default function UserProfile() {
                   disabled={!isEditing}
                 />
               </div>
-              {isEditing ? (
-                <Button type="submit">Save Changes</Button>
-              ) : (
-                <Button type="button" onClick={() => setIsEditing(true)}>Edit Profile</Button>
-              )}
             </div>
           </form>
         </CardContent>
